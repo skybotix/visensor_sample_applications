@@ -29,16 +29,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-#include <stdio.h>
-#include <iostream>
-
 #include <vi_sensor_interface.hpp>
 
 int main(int argc, char** argv) {
 
   ViSensorInterface viSensor;
 
-  while(1);
   return 0;
 }

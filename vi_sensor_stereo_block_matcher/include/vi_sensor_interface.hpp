@@ -40,6 +40,7 @@
 #include <boost/smart_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/filesystem.hpp>
 
 #include <Eigen/Core>
@@ -52,7 +53,6 @@
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include <visensor/visensor.hpp>
-#include "ConcurrentQueue.hpp"
 
 class ViSensorInterface {
  public:
@@ -75,8 +75,6 @@ class ViSensorInterface {
   bool computed_rectification_map_;
   cv::Mat map00_, map01_, map10_, map11_;
   cv::StereoBM bm_;
-
-  std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 
   void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
   void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
