@@ -30,7 +30,7 @@
  *
  */
 #include <vi_sensor_interface.hpp>
-#include <unistd.h>
+
 ViSensorInterface::ViSensorInterface(uint32_t image_rate, uint32_t imu_rate)
     : vi_sensor_connected_(false) {
   StartIntegratedSensor(image_rate, imu_rate);

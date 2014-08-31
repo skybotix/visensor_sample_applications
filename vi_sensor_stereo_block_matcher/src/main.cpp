@@ -30,44 +30,15 @@
  *
  */
 
-#include <vector>
+#include <stdio.h>
 #include <iostream>
-#include <ctime>
-#include <fstream>      
-#include <chrono>
 
-#include <boost/bind.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/filesystem.hpp>
+#include <vi_sensor_interface.hpp>
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
+int main(int argc, char** argv) {
 
-#include <opencv2/opencv.hpp>
+  ViSensorInterface viSensor;
 
-#include <visensor/visensor.hpp>
-#include "ConcurrentQueue.hpp"
-
-class ViSensorInterface {
- public:
-  ViSensorInterface();
-  ViSensorInterface(uint32_t image_rate, uint32_t imu_rate);
-  ~ViSensorInterface();
-
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
- private:
-  visensor::ViSensorDriver drv_;
-  typedef ConcurrentQueue<visensor::ViFrame::Ptr> ViFrameQueue;
-
-  ViFrameQueue frameQueue[4];
-
-  bool vi_sensor_connected_;
-  boost::mutex io_mutex_;
-
-  void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
-  void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
-  void ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr);
-  void worker(unsigned int cam_id);
-};
+  while(1);
+  return 0;
+}

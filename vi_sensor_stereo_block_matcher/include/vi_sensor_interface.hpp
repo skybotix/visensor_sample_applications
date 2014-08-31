@@ -46,6 +46,10 @@
 #include <Eigen/Dense>
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include <visensor/visensor.hpp>
 #include "ConcurrentQueue.hpp"
@@ -58,16 +62,25 @@ class ViSensorInterface {
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
  private:
+
   visensor::ViSensorDriver drv_;
-  typedef ConcurrentQueue<visensor::ViFrame::Ptr> ViFrameQueue;
+  typedef std::deque<visensor::ViFrame::Ptr> ViFrameQueue;
+  static const visensor::SensorId::SensorId idxCam0_ = visensor::SensorId::CAM0;
+  static const visensor::SensorId::SensorId idxCam1_ = visensor::SensorId::CAM1;
 
   ViFrameQueue frameQueue[4];
 
   bool vi_sensor_connected_;
   boost::mutex io_mutex_;
+  bool computed_rectification_map_;
+  cv::Mat map00_, map01_, map10_, map11_;
+  cv::StereoBM bm_;
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 
   void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
   void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
   void ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr);
-  void worker(unsigned int cam_id);
+  void process_data();
+  bool computeRectificationMaps(void);
 };

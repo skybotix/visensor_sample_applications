@@ -30,44 +30,83 @@
  *
  */
 
-#include <vector>
-#include <iostream>
-#include <ctime>
-#include <fstream>      
-#include <chrono>
+#ifndef CONCURRENTQUEUE_HPP_
+#define CONCURRENTQUEUE_HPP_
 
-#include <boost/bind.hpp>
-#include <boost/smart_ptr.hpp>
-#include <boost/shared_ptr.hpp>
+#include <queue>
+
+#include <boost/thread.hpp>
+#include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/thread/condition_variable.hpp>
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
-
-#include <opencv2/opencv.hpp>
-
-#include <visensor/visensor.hpp>
-#include "ConcurrentQueue.hpp"
-
-class ViSensorInterface {
- public:
-  ViSensorInterface();
-  ViSensorInterface(uint32_t image_rate, uint32_t imu_rate);
-  ~ViSensorInterface();
-
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+template<typename T>
+class ConcurrentQueue {
  private:
-  visensor::ViSensorDriver drv_;
-  typedef ConcurrentQueue<visensor::ViFrame::Ptr> ViFrameQueue;
+  std::queue<T> q_;
+  boost::mutex m_;
+  boost::condition_variable c_;
+  unsigned int cntr;
 
-  ViFrameQueue frameQueue[4];
+ public:
+  ConcurrentQueue() {
+    cntr = 0;
+  };
 
-  bool vi_sensor_connected_;
-  boost::mutex io_mutex_;
+  void push(const T& data) {
+    boost::lock_guard<boost::mutex> l(m_);
+    q_.push(data);
+    c_.notify_one();
+  }
 
-  void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
-  void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
-  void ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr);
-  void worker(unsigned int cam_id);
+  //if the queue is empty and we pop, we just wait for data!!
+  T pop() {
+    boost::mutex::scoped_lock l(m_);
+
+    if (q_.size() == 0) {
+      c_.wait(l);
+    }
+
+    T res = q_.front();
+    q_.pop();
+    return res;
+  }
+
+  //checks queue is empty
+  bool empty() {
+    boost::mutex::scoped_lock l(m_);
+    return q_.size() == 0;
+  }
+
+  //return size of queue
+  size_t size() {
+    boost::mutex::scoped_lock l(m_);
+    return q_.size();
+  }
+
+  void clear() {
+    std::queue<int> empty;
+    std::swap(q_, empty);
+  }
+
+  //returns current queue and clear it
+  std::queue<T> pop_all() {
+    boost::mutex::scoped_lock l(m_);
+
+    std::queue<T> queue; //empty here
+    std::swap(queue, q_);
+
+    return queue;
+  }
+
+  //returns current queue and clear it
+  std::queue<T> clone() {
+    boost::mutex::scoped_lock l(m_);
+
+    std::queue<T> queue = q_;
+    return queue;
+  }
+
 };
+
+#endif /* CONCURRENTQUEUE_HPP_ */
