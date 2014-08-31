@@ -79,9 +79,9 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
 	//Lets wait for the user to end program.
 	//This is ok as program is callback-driven anyways
   boost::mutex m;
-  boost::lock_guard<boost::mutex> l(m);
+  boost::mutex::scoped_lock l(m);
   boost::condition_variable c;
-	c_.wait(l);
+	c.wait(l);
 }
 
 void ViSensorInterface::ImageCallback(visensor::ViFrame::Ptr frame_ptr) {
