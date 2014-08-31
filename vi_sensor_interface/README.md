@@ -1,24 +1,22 @@
 vi_sensor_interface
 ===================
 
-OpenCV interface for VI sensor
+Simple example on how to interface the VI-Sensor and display the images using openCV
 
 Build instructions
 ==================
-Download libvisensor. If you do not have access, ask sammy.omari@skybotix.com .
+Download libvisensor and install it if you have not done that before
 
-<pre><code>cd libvisensor
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-sudo ldconfig
+<pre><code>
+git clone https://github.com/ethz-asl/libvisensor.git
+cd libvisensor
+./install_libvisensor.sh
 </code></pre>
 
-Now, were building the opencv interface to the vi sensor driver
+Now, were building the interface
 
-<pre><code>cd vi_sensor_interface
+<pre><code>
+cd vi_sensor_interface
 mkdir build
 cd build
 cmake ..
@@ -26,3 +24,4 @@ make
 cd ../bin
 ./vi_sensor_interface
 </code></pre>
+
