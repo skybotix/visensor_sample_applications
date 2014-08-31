@@ -94,7 +94,6 @@ void ViSensorInterface::ImageCallback(visensor::ViFrame::Ptr frame_ptr) {
 void ViSensorInterface::ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr) {
   Eigen::Vector3d gyro(imu_ptr->gyro[0], imu_ptr->gyro[1], imu_ptr->gyro[2]);
   Eigen::Vector3d acc(imu_ptr->acc[0], imu_ptr->acc[1], imu_ptr->acc[2]);
-
 }
 
 void ViSensorInterface::process_data() {
