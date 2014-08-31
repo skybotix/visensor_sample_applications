@@ -33,7 +33,7 @@
 
 int main(int argc, char** argv) {
 
-  ViSensorInterface viSensor;
-
+  ViSensorInterface visensor;
+  visensor.run();
   return 0;
 }

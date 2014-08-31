@@ -58,9 +58,15 @@ class ViSensorInterface {
   ViSensorInterface();
   ViSensorInterface(uint32_t image_rate, uint32_t imu_rate);
   ~ViSensorInterface();
+  void run(void);
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
  private:
+  void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
+  void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
+  void ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr);
+  void process_data();
+  bool computeRectificationMaps(void);
 
   visensor::ViSensorDriver drv_;
   typedef std::deque<visensor::ViFrame::Ptr> ViFrameQueue;
@@ -69,15 +75,8 @@ class ViSensorInterface {
 
   ViFrameQueue frameQueue[4];
 
-  bool vi_sensor_connected_;
   boost::mutex io_mutex_;
   bool computed_rectification_map_;
   cv::Mat map00_, map01_, map10_, map11_;
   cv::StereoBM bm_;
-
-  void StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate);
-  void ImageCallback(visensor::ViFrame::Ptr frame_ptr);
-  void ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr);
-  void process_data();
-  bool computeRectificationMaps(void);
 };

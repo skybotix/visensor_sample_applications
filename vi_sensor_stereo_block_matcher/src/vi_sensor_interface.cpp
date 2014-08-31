@@ -32,20 +32,33 @@
 #include <vi_sensor_interface.hpp>
 
 ViSensorInterface::ViSensorInterface(uint32_t image_rate, uint32_t imu_rate)
-    : vi_sensor_connected_(false),
-      computed_rectification_map_(false) {
+    : computed_rectification_map_(false) {
   StartIntegratedSensor(image_rate, imu_rate);
 }
 
 ViSensorInterface::ViSensorInterface()
-    : vi_sensor_connected_(false),
-      computed_rectification_map_(false) {
+    : computed_rectification_map_(false) {
 
   StartIntegratedSensor(20, 200);
 }
 
 ViSensorInterface::~ViSensorInterface() {
 
+}
+
+void ViSensorInterface::run(void) {
+  // set callback for completed frames
+  drv_.setCameraCallback(boost::bind(&ViSensorInterface::ImageCallback, this, _1));
+
+  // set callback for completed IMU messages
+  drv_.setImuCallback(boost::bind(&ViSensorInterface::ImuCallback, this, _1));
+
+  //Lets wait for the user to end program.
+  //This is ok as program is callback-driven anyways
+  boost::mutex m;
+  boost::mutex::scoped_lock l(m);
+  boost::condition_variable c;
+  c.wait(l);
 }
 
 void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_rate) {
@@ -65,23 +78,8 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
     std::cout << ex.what() << "\n";
     return;
   }
-
-  // set callback for completed frames
-  drv_.setCameraCallback(boost::bind(&ViSensorInterface::ImageCallback, this, _1));
-
-  // set callback for completed IMU messages
-  drv_.setImuCallback(boost::bind(&ViSensorInterface::ImuCallback, this, _1));
-
   drv_.startAllCameras(image_rate);
   drv_.startAllImus(imu_rate);
-  vi_sensor_connected_ = true;
-
-	//Lets wait for the user to end program.
-	//This is ok as program is callback-driven anyways
-  boost::mutex m;
-  boost::mutex::scoped_lock l(m);
-  boost::condition_variable c;
-	c.wait(l);
 }
 
 void ViSensorInterface::ImageCallback(visensor::ViFrame::Ptr frame_ptr) {
@@ -121,10 +119,10 @@ void ViSensorInterface::process_data() {
 
   cv::Mat img0, img1;
   img0.create(frame0->height, frame0->width, CV_8UC1);
-  memcpy(img0.data, frame0->getImageRawPtr(), frame0->height * frame0->width);
+  img0.data = frame0->getImageRawPtr();
 
   img1.create(frame1->height, frame1->width, CV_8UC1);
-  memcpy(img1.data, frame1->getImageRawPtr(), frame1->height * frame1->width);
+  img1.data = frame1->getImageRawPtr();
 
   cv::Mat img0rect, img1rect;
   cv::remap(img0, img0rect, map00_, map01_, cv::INTER_LINEAR);
@@ -233,25 +231,25 @@ bool ViSensorInterface::computeRectificationMaps(void) {
   r_temp[6] = R_rel(2, 0);
   r_temp[7] = R_rel(2, 1);
   r_temp[8] = R_rel(2, 2);
-  cv::Mat *C0 = (new cv::Mat_<double>(3, 3, c0, 3 * sizeof(double)));
-  cv::Mat *D0 = (new cv::Mat_<double>(5, 1, d0, 1 * sizeof(double)));
-  cv::Mat *R0 = (new cv::Mat_<double>(3, 3, r0, 3 * sizeof(double)));
-  cv::Mat *P0 = (new cv::Mat_<double>(3, 4, p0, 4 * sizeof(double)));
-  cv::Mat *C1 = (new cv::Mat_<double>(3, 3, c1, 3 * sizeof(double)));
-  cv::Mat *D1 = (new cv::Mat_<double>(5, 1, d1, 1 * sizeof(double)));
-  cv::Mat *R1 = (new cv::Mat_<double>(3, 3, r1, 3 * sizeof(double)));
-  cv::Mat *P1 = (new cv::Mat_<double>(3, 4, p1, 4 * sizeof(double)));
-  cv::Mat *R = (new cv::Mat_<double>(3, 3, r_temp, 3 * sizeof(double)));
-  cv::Mat *T = (new cv::Mat_<double>(3, 1, t, 1 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> C0(new cv::Mat_<double>(3, 3, c0, 3 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> D0(new cv::Mat_<double>(5, 1, d0, 1 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> R0(new cv::Mat_<double>(3, 3, r0, 3 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> P0(new cv::Mat_<double>(3, 4, p0, 4 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> C1(new cv::Mat_<double>(3, 3, c1, 3 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> D1(new cv::Mat_<double>(5, 1, d1, 1 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> R1(new cv::Mat_<double>(3, 3, r1, 3 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> P1(new cv::Mat_<double>(3, 4, p1, 4 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> R(new cv::Mat_<double>(3, 3, r_temp, 3 * sizeof(double)));
+  boost::shared_ptr<cv::Mat> T(new cv::Mat_<double>(3, 1, t, 1 * sizeof(double)));
   cv::Size img_size(image_width, image_height);
   cv::Rect roi1, roi2;
   cv::Mat Q;
-  cv::stereoRectify(*C0, *D0, *C1, *D1, img_size, *R, *T, *R0, *R1, *P0, *P1, Q, cv::CALIB_ZERO_DISPARITY, 0,
-                    img_size, &roi1, &roi2);
+  cv::stereoRectify(*C0, *D0, *C1, *D1, img_size, *R, *T, *R0, *R1, *P0, *P1, Q, cv::CALIB_ZERO_DISPARITY, 0, img_size,
+                    &roi1, &roi2);
 
   cv::initUndistortRectifyMap(*C0, *D0, *R0, *P0, img_size, CV_16SC2, map00_, map01_);
   cv::initUndistortRectifyMap(*C1, *D1, *R1, *P1, img_size, CV_16SC2, map10_, map11_);
 
-	computed_rectification_map_ = true;
+  computed_rectification_map_ = true;
   return true;
 }
