@@ -231,24 +231,33 @@ bool ViSensorInterface::computeRectificationMaps(void) {
   r_temp[6] = R_rel(2, 0);
   r_temp[7] = R_rel(2, 1);
   r_temp[8] = R_rel(2, 2);
-  boost::shared_ptr<cv::Mat> C0(new cv::Mat_<double>(3, 3, c0, 3 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> D0(new cv::Mat_<double>(5, 1, d0, 1 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> R0(new cv::Mat_<double>(3, 3, r0, 3 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> P0(new cv::Mat_<double>(3, 4, p0, 4 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> C1(new cv::Mat_<double>(3, 3, c1, 3 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> D1(new cv::Mat_<double>(5, 1, d1, 1 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> R1(new cv::Mat_<double>(3, 3, r1, 3 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> P1(new cv::Mat_<double>(3, 4, p1, 4 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> R(new cv::Mat_<double>(3, 3, r_temp, 3 * sizeof(double)));
-  boost::shared_ptr<cv::Mat> T(new cv::Mat_<double>(3, 1, t, 1 * sizeof(double)));
+
+  //cv::Mat wrapped(rows, cols, CV_32FC1, external_mem, CV_AUTOSTEP);
+  cv::Mat C0(3, 3, CV_64FC1, c0, CV_AUTOSTEP);
+  cv::Mat D0(5, 1, CV_64FC1, d0, CV_AUTOSTEP);
+  cv::Mat R0(3, 3, CV_64FC1, r0, CV_AUTOSTEP);
+  cv::Mat P0(3, 4, CV_64FC1, p0, CV_AUTOSTEP);
+
+  cv::Mat C1(3, 3, CV_64FC1, c1, CV_AUTOSTEP);
+  cv::Mat D1(5, 1, CV_64FC1, d1, CV_AUTOSTEP);
+  cv::Mat R1(3, 3, CV_64FC1, r1, CV_AUTOSTEP);
+  cv::Mat P1(3, 4, CV_64FC1, p1, CV_AUTOSTEP);
+
+  cv::Mat R(3, 3, CV_64FC1, r_temp, CV_AUTOSTEP);
+
+  cv::Mat T(3, 1, CV_64FC1, t, 1 * CV_AUTOSTEP);
+
   cv::Size img_size(image_width, image_height);
+
   cv::Rect roi1, roi2;
   cv::Mat Q;
-  cv::stereoRectify(*C0, *D0, *C1, *D1, img_size, *R, *T, *R0, *R1, *P0, *P1, Q, cv::CALIB_ZERO_DISPARITY, 0, img_size,
-                    &roi1, &roi2);
 
-  cv::initUndistortRectifyMap(*C0, *D0, *R0, *P0, img_size, CV_16SC2, map00_, map01_);
-  cv::initUndistortRectifyMap(*C1, *D1, *R1, *P1, img_size, CV_16SC2, map10_, map11_);
+  cv::stereoRectify(C0, D0, C1, D1, img_size, R, T, R0, R1, P0, P1, Q, cv::CALIB_ZERO_DISPARITY, 0,
+                    img_size, &roi1, &roi2);
+
+
+  cv::initUndistortRectifyMap(C0, D0, R0, P0, img_size, CV_16SC2, map00_, map01_);
+  cv::initUndistortRectifyMap(C1, D1, R1, P1, img_size, CV_16SC2, map10_, map11_);
 
   computed_rectification_map_ = true;
   return true;
