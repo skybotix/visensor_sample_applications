@@ -67,8 +67,8 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
     image_rate = 30;
     std::cout << "Desired image rate is too high, setting it to 30 Hz." << std::endl;
   }
-  if (image_rate > 800) {
-    image_rate = 800;
+  if (imu_rate > 800) {
+    imu_rate = 800;
     std::cout << "Desired imu rate is too high, setting it to 800 Hz." << std::endl;
   }
 
