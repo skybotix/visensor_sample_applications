@@ -78,6 +78,15 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
     std::cout << ex.what() << "\n";
     return;
   }
+  //determine which camera is left and which is right (required for opencv block matcher)
+  if (!drv_.isStereoCameraFlipped()){
+    idxCam0_ = visensor::SensorId::CAM0;
+    idxCam1_ = visensor::SensorId::CAM1;
+  }else{
+    idxCam0_ = visensor::SensorId::CAM1;
+    idxCam1_ = visensor::SensorId::CAM0;
+  }
+
   drv_.startAllCameras(image_rate);
   drv_.startAllImus(imu_rate);
 }
@@ -221,6 +230,7 @@ bool ViSensorInterface::computeRectificationMaps(void) {
   Eigen::Map<Eigen::Vector3d> t_rel(t);
   R_rel = T_rel.block<3, 3>(0, 0);
   t_rel << T_rel(0, 3), T_rel(1, 3), T_rel(2, 3);
+
   double r_temp[9];
   r_temp[0] = R_rel(0, 0);
   r_temp[1] = R_rel(0, 1);
