@@ -233,19 +233,19 @@ bool ViSensorInterface::computeRectificationMaps(void) {
   r_temp[8] = R_rel(2, 2);
 
   //cv::Mat wrapped(rows, cols, CV_32FC1, external_mem, CV_AUTOSTEP);
-  cv::Mat C0(3, 3, CV_64FC1, c0, CV_AUTOSTEP);
-  cv::Mat D0(5, 1, CV_64FC1, d0, CV_AUTOSTEP);
-  cv::Mat R0(3, 3, CV_64FC1, r0, CV_AUTOSTEP);
-  cv::Mat P0(3, 4, CV_64FC1, p0, CV_AUTOSTEP);
+  cv::Mat C0(3, 3, CV_64FC1, c0, 3 * sizeof(double));
+  cv::Mat D0(5, 1, CV_64FC1, d0, 1 * sizeof(double));
+  cv::Mat R0(3, 3, CV_64FC1, r0, 3 * sizeof(double));
+  cv::Mat P0(3, 4, CV_64FC1, p0, 4 * sizeof(double));
 
-  cv::Mat C1(3, 3, CV_64FC1, c1, CV_AUTOSTEP);
-  cv::Mat D1(5, 1, CV_64FC1, d1, CV_AUTOSTEP);
-  cv::Mat R1(3, 3, CV_64FC1, r1, CV_AUTOSTEP);
-  cv::Mat P1(3, 4, CV_64FC1, p1, CV_AUTOSTEP);
+  cv::Mat C1(3, 3, CV_64FC1, c1, 3 * sizeof(double));
+  cv::Mat D1(5, 1, CV_64FC1, d1, 1 * sizeof(double));
+  cv::Mat R1(3, 3, CV_64FC1, r1, 3 * sizeof(double));
+  cv::Mat P1(3, 4, CV_64FC1, p1, 4 * sizeof(double));
 
-  cv::Mat R(3, 3, CV_64FC1, r_temp, CV_AUTOSTEP);
+  cv::Mat R(3, 3, CV_64FC1, r_temp, 3 * sizeof(double));
 
-  cv::Mat T(3, 1, CV_64FC1, t, 1 * CV_AUTOSTEP);
+  cv::Mat T(3, 1, CV_64FC1, t, 1 * sizeof(double));
 
   cv::Size img_size(image_width, image_height);
 
