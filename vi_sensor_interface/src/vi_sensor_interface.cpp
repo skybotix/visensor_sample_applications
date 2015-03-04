@@ -91,9 +91,12 @@ void ViSensorInterface::ImageCallback(visensor::ViFrame::Ptr frame_ptr) {
 }
 
 void ViSensorInterface::ImuCallback(boost::shared_ptr<visensor::ViImuMsg> imu_ptr) {
+  if (imu_ptr->imu_id != visensor::SensorId::IMU0)
+    return;
   uint32_t timeNSec = imu_ptr->timestamp;
   Eigen::Vector3d gyro(imu_ptr->gyro[0], imu_ptr->gyro[1], imu_ptr->gyro[2]);
   Eigen::Vector3d acc(imu_ptr->acc[0], imu_ptr->acc[1], imu_ptr->acc[2]);
+  std::cout << "IMU Accelerometer data: " << acc[0] << "\t "<< acc[1] << "\t"<< acc[2] << "\t" << std::endl;
 	//Do stuff with IMU...
 }
 
