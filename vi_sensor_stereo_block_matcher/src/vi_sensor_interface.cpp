@@ -85,6 +85,15 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
   // load available calibration and configure sensors corresponding to it
   drv_.selectCameraCalibration();
 
+  //determine which camera is left and which is right (required for opencv block matcher)
+  if (!drv_.isStereoCameraFlipped()){
+    idxCam0_ = visensor::SensorId::CAM0;
+    idxCam1_ = visensor::SensorId::CAM1;
+  }else{
+    idxCam0_ = visensor::SensorId::CAM1;
+    idxCam1_ = visensor::SensorId::CAM0;
+  }
+
   drv_.startAllCameras(image_rate);
   drv_.startAllImus(imu_rate);
 }
