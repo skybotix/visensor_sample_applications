@@ -63,6 +63,12 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
     return;
   }
 
+  std::cout << "Libvisensor version is " << visensor::LIBRARY_VERSION_MAJOR << "."
+      << visensor::LIBRARY_VERSION_MINOR << "." << visensor::LIBRARY_VERSION_PATCH << std::endl;
+
+  // load available calibration and configure sensors corresponding to it
+  drv_.selectCameraCalibration();
+
   // set callback for image messages
   drv_.setCameraCallback(boost::bind(&ViSensorInterface::ImageCallback, this, _1));
 

@@ -78,6 +78,13 @@ void ViSensorInterface::StartIntegratedSensor(uint32_t image_rate, uint32_t imu_
     std::cout << ex.what() << "\n";
     return;
   }
+
+  std::cout << "Libvisensor version is " << visensor::LIBRARY_VERSION_MAJOR << "."
+      << visensor::LIBRARY_VERSION_MINOR << "." << visensor::LIBRARY_VERSION_PATCH << std::endl;
+
+  // load available calibration and configure sensors corresponding to it
+  drv_.selectCameraCalibration();
+
   drv_.startAllCameras(image_rate);
   drv_.startAllImus(imu_rate);
 }
@@ -145,82 +152,139 @@ void ViSensorInterface::process_data() {
 
 bool ViSensorInterface::computeRectificationMaps(void) {
   visensor::ViCameraCalibration camera_calibration_0, camera_calibration_1;
-  if (!drv_.getCameraCalibration(idxCam0_, camera_calibration_0))
+  try {
+    visensor::ViCameraCalibration tmp;
+    std::vector<visensor::ViCameraCalibration> calibrations;
+    drv_.getSelectedCameraCalibration(&tmp, idxCam0_);
+    if (tmp.lens_model_->type_ != visensor::ViCameraLensModel::LensModelTypes::RADTAN ||
+        tmp.projection_model_->type_ != visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE) {
+      std::cerr << "No radtan and pinhole calibration specified. Therefore the factory "
+          "calibration is choosen for the ROS sensor message." << std::endl;
+      calibrations = drv_.getCameraCalibrations(
+          idxCam0_, 0, tmp.is_flipped_,
+          visensor::ViCameraLensModel::LensModelTypes::RADTAN,
+          visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
+      if (calibrations.size() == 0) {
+        std::cerr << "No corresponding Factory Calibration for cam left found" << std::endl;
+        return false;
+      }
+      camera_calibration_0 = calibrations.front();
+    }
+    else {
+      camera_calibration_0 = tmp;
+    }
+    drv_.getSelectedCameraCalibration(&tmp, idxCam1_);
+    if (tmp.lens_model_->type_ != visensor::ViCameraLensModel::LensModelTypes::RADTAN ||
+        tmp.projection_model_->type_ != visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE) {
+      std::cerr << "No radtan and pinhole calibration specified. "
+          "Therefore the factory calibration is choosen for the ROS sensor message." << std::endl;
+      calibrations = drv_.getCameraCalibrations(
+          idxCam1_, 0, tmp.is_flipped_,
+          visensor::ViCameraLensModel::LensModelTypes::RADTAN,
+          visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
+      if (calibrations.size() == 0) {
+        std::cerr << "No corresponding Factory Calibration for cam right found" << std::endl;
+        return false;
+      }
+      camera_calibration_1 = calibrations.front();
+    }
+    else {
+      camera_calibration_1 = tmp;
+    }
+  }
+  catch (visensor::exceptions const &ex) {
+    std::cerr << "Could not read the camera configuration of cameras "<< idxCam0_ << " and "
+        << idxCam1_ << ". Exception: " <<  ex.what() << std::endl;
     return false;
-  if (!drv_.getCameraCalibration(idxCam1_, camera_calibration_1))
-    return false;
-  int image_width = 752;
-  int image_height = 480;
+  }
+
+  int image_width = camera_calibration_0.resolution_[0];
+  int image_height = camera_calibration_0.resolution_[1];;
+
   double c0[9];
   double d0[5];
   double r0[9];
   double p0[12];
   double rot0[9];
   double t0[3];
+
   double c1[9];
   double d1[5];
   double r1[9];
   double p1[12];
   double rot1[9];
   double t1[3];
+
   double r[9];
   double t[3];
 
-  d0[0] = camera_calibration_0.dist_coeff[0];
-  d0[1] = camera_calibration_0.dist_coeff[1];
-  d0[2] = camera_calibration_0.dist_coeff[2];
-  d0[3] = camera_calibration_0.dist_coeff[3];
-  d0[4] = 0.0;
-  c0[0] = camera_calibration_0.focal_point[0];
+  std::vector<double> lens_coefficients = camera_calibration_0.lens_model_->getCoefficients();
+  std::fill(d0, d0 + 5, 0);
+  for ( unsigned int i = 0; i < lens_coefficients.size(); ++i ) {
+    d0[i] = lens_coefficients.at(i);
+  }
+  visensor::ViCameraProjectionModelPinhole::Ptr cam0_projection_model =
+      camera_calibration_0.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+  c0[0] = cam0_projection_model->focal_length_u_;
   c0[1] = 0.0;
-  c0[2] = camera_calibration_0.principal_point[0];
+  c0[2] = cam0_projection_model->principal_point_u_;
   c0[3] = 0.0;
-  c0[4] = camera_calibration_0.focal_point[1];
-  c0[5] = camera_calibration_0.principal_point[1];
+  c0[4] = cam0_projection_model->focal_length_v_;
+  c0[5] = cam0_projection_model->principal_point_v_;
   c0[6] = 0.0;
   c0[7] = 0.0;
   c0[8] = 1.0;
-  d1[0] = camera_calibration_1.dist_coeff[0];
-  d1[1] = camera_calibration_1.dist_coeff[1];
-  d1[2] = camera_calibration_1.dist_coeff[2];
-  d1[3] = camera_calibration_1.dist_coeff[3];
-  d1[4] = 0.0;
-  c1[0] = camera_calibration_1.focal_point[0];
+
+  lens_coefficients = camera_calibration_1.lens_model_->getCoefficients();
+  std::fill(d1, d1 + 5, 0);
+  for ( unsigned int i = 0; i < lens_coefficients.size(); ++i ) {
+    d1[i] = lens_coefficients.at(i);
+  }
+  visensor::ViCameraProjectionModelPinhole::Ptr cam1_projection_model =
+      camera_calibration_1.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+  c1[0] = cam1_projection_model->focal_length_u_;
   c1[1] = 0.0;
-  c1[2] = camera_calibration_1.principal_point[0];
+  c1[2] = cam1_projection_model->principal_point_u_;
   c1[3] = 0.0;
-  c1[4] = camera_calibration_1.focal_point[1];
-  c1[5] = camera_calibration_1.principal_point[1];
+  c1[4] = cam1_projection_model->focal_length_v_;
+  c1[5] = cam1_projection_model->principal_point_v_;
   c1[6] = 0.0;
   c1[7] = 0.0;
   c1[8] = 1.0;
 
   for (int i = 0; i < 9; ++i) {
-    rot0[i] = camera_calibration_0.R[i];
-    rot1[i] = camera_calibration_1.R[i];
+    rot0[i] = camera_calibration_0.R_[i];
+    rot1[i] = camera_calibration_1.R_[i];
   }
   for (int i = 0; i < 3; ++i) {
-    t0[i] = camera_calibration_0.t[i];
-    t1[i] = camera_calibration_1.t[i];
+    t0[i] = camera_calibration_0.t_[i];
+    t1[i] = camera_calibration_1.t_[i];
   }
-  Eigen::Map<Eigen::Matrix3d> RR0(rot0);
-  Eigen::Map<Eigen::Vector3d> tt0(t0);
-  Eigen::Map<Eigen::Matrix3d> RR1(rot1);
-  Eigen::Map<Eigen::Vector3d> tt1(t1);
+
+  Eigen::Map < Eigen::Matrix3d > RR0(rot0);
+  Eigen::Map < Eigen::Vector3d > tt0(t0);
+  Eigen::Map < Eigen::Matrix3d > RR1(rot1);
+  Eigen::Map < Eigen::Vector3d > tt1(t1);
+
   Eigen::Matrix4d T0 = Eigen::Matrix4d::Zero();
   Eigen::Matrix4d T1 = Eigen::Matrix4d::Zero();
+
   T0.block<3, 3>(0, 0) = RR0;
   T0.block<3, 1>(0, 3) = tt0;
   T0(3, 3) = 1.0;
   T1.block<3, 3>(0, 0) = RR1;
   T1.block<3, 1>(0, 3) = tt1;
   T1(3, 3) = 1.0;
+
   Eigen::Matrix4d T_rel = Eigen::Matrix4d::Zero();
   T_rel = T1 * T0.inverse();
-  Eigen::Map<Eigen::Matrix3d> R_rel(r);
-  Eigen::Map<Eigen::Vector3d> t_rel(t);
+
+  Eigen::Map < Eigen::Matrix3d > R_rel(r);
+  Eigen::Map < Eigen::Vector3d > t_rel(t);
+
   R_rel = T_rel.block<3, 3>(0, 0);
   t_rel << T_rel(0, 3), T_rel(1, 3), T_rel(2, 3);
+
   double r_temp[9];
   r_temp[0] = R_rel(0, 0);
   r_temp[1] = R_rel(0, 1);
@@ -254,7 +318,6 @@ bool ViSensorInterface::computeRectificationMaps(void) {
 
   cv::stereoRectify(C0, D0, C1, D1, img_size, R, T, R0, R1, P0, P1, Q, cv::CALIB_ZERO_DISPARITY, 0,
                     img_size, &roi1, &roi2);
-
 
   cv::initUndistortRectifyMap(C0, D0, R0, P0, img_size, CV_16SC2, map00_, map01_);
   cv::initUndistortRectifyMap(C1, D1, R1, P1, img_size, CV_16SC2, map10_, map11_);
